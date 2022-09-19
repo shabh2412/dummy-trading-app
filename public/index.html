@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Trading App</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+			integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT"
+			crossorigin="anonymous"
+		/>
+	</head>
+	<!-- 
+		export type appCurrencyType = {
+			code: string;
+			name: string;
+			namePlural: string;
+			rounding: number;
+			symbol: string;
+			symbolNative: string;
+			decimalDigits: number;
+			value: number;
+			color: "green" | "red" | "white";
+			changeBy: number;
+		};
+	 -->
+	<body>
+		<div class="container">
+			<h1 class="text-center my-4 text-decoration-underline">Trader.io</h1>
+			<div class="my-4">
+				<h2 class="text-center placeholder-glow">
+					Your Wallet Balance: ₹<span id="wallet" class="col-6">...</span>
+				</h2>
+			</div>
+			<table class="table table-dark table-hover text-center">
+				<thead>
+					<tr>
+						<th scope="col">Code</th>
+						<th scope="col">Name</th>
+						<th scope="col">Symbol</th>
+						<th scope="col">Value (in INR)</th>
+						<th scope="col">Change</th>
+						<th scope="col">You Own</th>
+						<th scope="col">Actions</th>
+					</tr>
+				</thead>
+				<tbody id="currencyTableBody"></tbody>
+			</table>
+		</div>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			let walletBalance = 1000;
+			const walletBalanceTag = document.getElementById("wallet");
+			const currencyTableBody = document.getElementById("currencyTableBody");
+			function createTableRow(currency) {
+				const tr = document.createElement("tr");
+				if (currency.changeBy < 0) {
+					tr.classList = "text-danger";
+				} else if (currency.changeBy > 0) {
+					tr.classList = "text-success";
+				}
+				const code = document.createElement("th");
+				code.classList = "code";
+				code.scope = "row";
+				code.innerText = currency.code;
+				const name = document.createElement("td");
+				name.classList = "name";
+				name.innerText = currency.name;
+				const symbol = document.createElement("td");
+				symbol.classList = "symbol text-white";
+				symbol.innerText = currency.symbol;
+				const value = document.createElement("td");
+				value.classList = "value";
+				value.innerText = currency.value.toFixed(2);
+				const change = document.createElement("td");
+				change.classList = "change";
+				change.innerText = currency.changeBy.toFixed(2);
+				const userOwns = document.createElement("td");
+				userOwns.classList = "userOwns text-white";
+				userOwns.innerText = currency.userOwns;
+				const action = document.createElement("td");
+				action.classList = "action";
+				const btn = document.createElement("button");
+				btn.classList = "btn btn-success text-white";
+				btn.innerText = "Buy";
+				action.append(btn);
+				tr.append(code, name, symbol, value, change, userOwns, action);
+				return tr;
+			}
+			var socket = io();
+			socket.on("values", ({ currencies, userWalletBalance }) => {
+				currencyTableBody.innerHTML = null;
+				// console.log(currencies);
+				// console.log(userWalletBalance);
+				walletBalanceTag.innerText = userWalletBalance.toFixed(2);
+				currencies.forEach((currency) => {
+					currencyTableBody.append(createTableRow(currency));
+				});
+			});
+
+			// using event delegation to caputre buy requests from user.
+			currencyTableBody.addEventListener("click", (e) => {
+				// console.log(e.target);
+				if (e.target.innerText.toLowerCase() === "buy") {
+					const tr = e.target.parentNode.parentNode;
+					const code = tr.getElementsByClassName("code")[0];
+					const value = tr.getElementsByClassName("value")[0];
+					// walletBalance -= +value.innerText;
+					// walletBalanceTag.innerText = walletBalance;
+					socket.emit("buy", { code: code.innerText });
+					console.log(code.innerText);
+				}
+			});
+
+			socket.on("success", ({ message }) => {
+				alert(message);
+			});
+			socket.on("failure", ({ message }) => {
+				alert(message);
+			});
+		</script>
+	</body>
+	<script
+		src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
+		crossorigin="anonymous"
+	></script>
+</html>
